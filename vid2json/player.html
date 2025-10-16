@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video JSON Player</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+        
+        .file-input-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .config-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .config-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+        
+        .config-group {
+            flex: 1;
+        }
+        
+        .config-group label {
+            display: block;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+        }
+        
+        .config-group input[type="number"],
+        .config-group input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        .config-group textarea {
+            width: 100%;
+            padding: 8px;
+            font-size: 12px;
+            font-family: monospace;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        input[type="number"] {
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 80px;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        
+        #canvas {
+            border: 1px solid #ddd;
+            display: block;
+            margin: 0 auto;
+            background-color: #000;
+        }
+        
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .info-item {
+            margin: 5px 0;
+        }
+        
+        .error {
+            color: #dc3545;
+            padding: 15px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Video JSON Player</h1>
+        
+        <div class="config-section">
+            <h3 style="margin-top: 0;">Configuration</h3>
+            <div class="config-row">
+                <div class="config-group">
+                    <label for="widthInput">Width (pixels)</label>
+                    <input type="number" id="widthInput" min="1" value="160" required>
+                </div>
+                <div class="config-group">
+                    <label for="heightInput">Height (pixels)</label>
+                    <input type="number" id="heightInput" min="1" value="120" required>
+                </div>
+            </div>
+            <div class="config-row">
+                <div class="config-group">
+                    <label for="paletteInput">Palette (JSON format)</label>
+                    <textarea id="paletteInput" rows="4" placeholder='[[0.0, 0.0, 0.0], [1.0, 1.0, 1.0], ...]'></textarea>
+                    <div class="help-text">Optional: Enter palette as JSON array. Leave empty if not using palette mode.</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="file-input-section">
+            <input type="file" id="fileInput" accept=".json">
+            <p>Select a JSON file generated by vid2json.py</p>
+        </div>
+        
+        <div id="error" class="error" style="display: none;"></div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <button id="playPauseBtn" disabled>Play</button>
+            </div>
+            <div class="control-group">
+                <label for="fpsInput">FPS:</label>
+                <input type="number" id="fpsInput" min="1" max="120" value="24">
+            </div>
+            <div class="control-group">
+                <label for="frameDisplay">Frame:</label>
+                <span id="frameDisplay">0 / 0</span>
+            </div>
+        </div>
+        
+        <canvas id="canvas"></canvas>
+        
+        <div class="info" id="info" style="display: none;">
+            <div class="info-item"><strong>Resolution:</strong> <span id="resolution">-</span></div>
+            <div class="info-item"><strong>Total Frames:</strong> <span id="totalFrames">-</span></div>
+            <div class="info-item"><strong>Current FPS:</strong> <span id="currentFps">-</span></div>
+            <div class="info-item"><strong>Format:</strong> <span id="format">-</span></div>
+        </div>
+    </div>
+
+    <script>
+        class VideoPlayer {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.videoData = null;
+                this.decodedFrames = null;
+                this.currentFrame = 0;
+                this.isPlaying = false;
+                this.animationId = null;
+                this.lastFrameTime = 0;
+                this.fps = 24;
+                this.frameDelay = 1000 / 24;
+                this.width = 0;
+                this.height = 0;
+                this.palette = null;
+                
+                this.setupEventListeners();
+            }
+            
+            setupEventListeners() {
+                const fileInput = document.getElementById('fileInput');
+                const playPauseBtn = document.getElementById('playPauseBtn');
+                const fpsInput = document.getElementById('fpsInput');
+                
+                fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+                playPauseBtn.addEventListener('click', () => this.togglePlayPause());
+                fpsInput.addEventListener('input', (e) => this.handleFpsChange(e));
+            }
+            
+            handleFileSelect(event) {
+                const input = event.target;
+                const file = input.files[0];
+                
+                if (!file) return;
+                
+                this.hideError();
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const json = JSON.parse(e.target.result);
+                        this.loadVideoData(json);
+                    } catch (error) {
+                        this.showError(`Error parsing JSON: ${error.message}`);
+                    }
+                };
+                reader.onerror = () => {
+                    this.showError('Error reading file');
+                };
+                reader.readAsText(file);
+            }
+            
+            parseBucketData(bucketData) {
+                /**
+                 * Parse bucket data from the new format.
+                 * Buckets are stored as: {"f0": "1,5,2,3,...", "f1": "3,2,1,4,...", ...}
+                 * Returns a flat array of numbers.
+                 */
+                const flatArray = [];
+                
+                // Get all bucket keys and sort them
+                const keys = Object.keys(bucketData).sort((a, b) => {
+                    const numA = parseInt(a.substring(1));
+                    const numB = parseInt(b.substring(1));
+                    return numA - numB;
+                });
+                
+                // Parse each bucket and concatenate
+                for (const key of keys) {
+                    const bucketStr = bucketData[key];
+                    if (bucketStr && bucketStr.trim()) {
+                        const values = bucketStr.split(',').map(v => parseFloat(v.trim()));
+                        flatArray.push(...values);
+                    }
+                }
+                
+                return flatArray;
+            }
+            
+            decodeNewRLEFormat(flatRLEArray, width, height, palette) {
+                /**
+                 * Decode the new flat RLE format into frames.
+                 * Format: [paletteIndex1, count1, paletteIndex2, count2, ...]
+                 * Even indexes = palette index (or R value if no palette)
+                 * Odd indexes = RLE count
+                 */
+                const frames = [];
+                const totalPixels = width * height;
+                let currentPixelCount = 0;
+                let currentFrame = [];
+                
+                // Process RLE array in pairs
+                for (let i = 0; i < flatRLEArray.length; i += 2) {
+                    const paletteIndex = flatRLEArray[i];
+                    const count = flatRLEArray[i + 1];
+                    
+                    // Get the color from palette
+                    const color = palette[paletteIndex];
+                    
+                    if (!color) {
+                        console.error(`Invalid palette index: ${paletteIndex}`);
+                        continue;
+                    }
+                    
+                    // Add pixels to current frame
+                    for (let j = 0; j < count; j++) {
+                        currentFrame.push(color);
+                        currentPixelCount++;
+                        
+                        // Check if frame is complete
+                        if (currentPixelCount === totalPixels) {
+                            // Convert flat array to 2D array
+                            const frame2D = [];
+                            for (let y = 0; y < height; y++) {
+                                const row = [];
+                                for (let x = 0; x < width; x++) {
+                                    row.push(currentFrame[y * width + x]);
+                                }
+                                frame2D.push(row);
+                            }
+                            frames.push(frame2D);
+                            
+                            // Reset for next frame
+                            currentFrame = [];
+                            currentPixelCount = 0;
+                        }
+                    }
+                }
+                
+                return frames;
+            }
+            
+            loadVideoData(data) {
+                // Get configuration values
+                const widthInput = document.getElementById('widthInput');
+                const heightInput = document.getElementById('heightInput');
+                const paletteInput = document.getElementById('paletteInput');
+                
+                this.width = parseInt(widthInput.value);
+                this.height = parseInt(heightInput.value);
+                
+                if (!this.width || this.width <= 0 || !this.height || this.height <= 0) {
+                    this.showError('Please enter valid width and height values');
+                    return;
+                }
+                
+                // Parse palette if provided
+                this.palette = null;
+                const paletteStr = paletteInput.value.trim();
+                if (paletteStr) {
+                    try {
+                        this.palette = JSON.parse(paletteStr);
+                        if (!Array.isArray(this.palette)) {
+                            this.showError('Palette must be a JSON array');
+                            return;
+                        }
+                    } catch (error) {
+                        this.showError(`Error parsing palette: ${error.message}`);
+                        return;
+                    }
+                }
+                
+                if (!this.palette) {
+                    this.showError('Palette is required for the new format');
+                    return;
+                }
+                
+                try {
+                    // Check if this is the new bucket format
+                    const firstKey = Object.keys(data)[0];
+                    if (firstKey && firstKey.startsWith('f') && typeof data[firstKey] === 'string') {
+                        // New bucket format
+                        console.log('Detected new bucket format');
+                        
+                        // Parse all buckets into a flat array
+                        console.log('Parsing bucket data...');
+                        const flatRLEArray = this.parseBucketData(data);
+                        console.log(`Parsed ${flatRLEArray.length} values from buckets`);
+                        
+                        // Decode frames from flat RLE array
+                        console.log('Decoding RLE frames...');
+                        this.decodedFrames = this.decodeNewRLEFormat(
+                            flatRLEArray, 
+                            this.width, 
+                            this.height, 
+                            this.palette
+                        );
+                        console.log(`Decoded ${this.decodedFrames.length} frames`);
+                        
+                    } else {
+                        this.showError('Unrecognized JSON format. Expected bucket format with "f0", "f1", etc.');
+                        return;
+                    }
+                } catch (error) {
+                    this.showError(`Error processing video data: ${error.message}`);
+                    console.error(error);
+                    return;
+                }
+                
+                this.videoData = data;
+                this.currentFrame = 0;
+                this.isPlaying = false;
+                
+                // Set canvas dimensions
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+                
+                // Update UI
+                const formatStr = `RLE Bucket Format (${this.palette.length} colors)`;
+                this.updateInfo(this.width, this.height, this.decodedFrames.length, formatStr);
+                this.drawFrame(0);
+                
+                // Enable play button
+                const playPauseBtn = document.getElementById('playPauseBtn');
+                playPauseBtn.disabled = false;
+            }
+            
+            drawFrame(frameIndex) {
+                if (!this.decodedFrames || frameIndex >= this.decodedFrames.length) {
+                    return;
+                }
+                
+                const frame = this.decodedFrames[frameIndex];
+                const height = frame.length;
+                const width = frame[0].length;
+                
+                // Create ImageData for efficient rendering
+                const imageData = this.ctx.createImageData(width, height);
+                const data = imageData.data;
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const color = frame[y][x];
+                        const pixelIndex = (y * width + x) * 4;
+                        
+                        // Convert normalized RGB (0.0-1.0) to 0-255
+                        data[pixelIndex] = Math.round(color[0] * 255);      // R
+                        data[pixelIndex + 1] = Math.round(color[1] * 255);  // G
+                        data[pixelIndex + 2] = Math.round(color[2] * 255);  // B
+                        data[pixelIndex + 3] = 255;                         // A
+                    }
+                }
+                
+                this.ctx.putImageData(imageData, 0, 0);
+                this.updateFrameDisplay(frameIndex);
+            }
+            
+            animate(timestamp) {
+                if (!this.isPlaying) return;
+                
+                // Calculate if enough time has passed for next frame
+                if (timestamp - this.lastFrameTime >= this.frameDelay) {
+                    this.currentFrame++;
+                    
+                    // Loop back to start
+                    if (this.currentFrame >= this.decodedFrames.length) {
+                        this.currentFrame = 0;
+                    }
+                    
+                    this.drawFrame(this.currentFrame);
+                    this.lastFrameTime = timestamp;
+                }
+                
+                this.animationId = requestAnimationFrame((t) => this.animate(t));
+            }
+            
+            togglePlayPause() {
+                const playPauseBtn = document.getElementById('playPauseBtn');
+                
+                if (this.isPlaying) {
+                    this.isPlaying = false;
+                    if (this.animationId !== null) {
+                        cancelAnimationFrame(this.animationId);
+                        this.animationId = null;
+                    }
+                    playPauseBtn.textContent = 'Play';
+                } else {
+                    this.isPlaying = true;
+                    this.lastFrameTime = performance.now();
+                    this.animationId = requestAnimationFrame((t) => this.animate(t));
+                    playPauseBtn.textContent = 'Pause';
+                }
+            }
+            
+            handleFpsChange(event) {
+                const input = event.target;
+                const newFps = parseInt(input.value);
+                
+                if (newFps > 0 && newFps <= 120) {
+                    this.fps = newFps;
+                    this.frameDelay = 1000 / newFps;
+                    this.updateCurrentFps(newFps);
+                }
+            }
+            
+            updateInfo(width, height, totalFrames, format) {
+                const infoDiv = document.getElementById('info');
+                infoDiv.style.display = 'block';
+                
+                document.getElementById('resolution').textContent = `${width} x ${height}`;
+                document.getElementById('totalFrames').textContent = totalFrames.toString();
+                document.getElementById('format').textContent = format;
+                this.updateCurrentFps(this.fps);
+            }
+            
+            updateCurrentFps(fps) {
+                document.getElementById('currentFps').textContent = fps.toString();
+            }
+            
+            updateFrameDisplay(frameIndex) {
+                const total = this.decodedFrames ? this.decodedFrames.length : 0;
+                document.getElementById('frameDisplay').textContent = `${frameIndex + 1} / ${total}`;
+            }
+            
+            showError(message) {
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+            
+            hideError() {
+                const errorDiv = document.getElementById('error');
+                errorDiv.style.display = 'none';
+            }
+        }
+        
+        // Initialize player when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            new VideoPlayer('canvas');
+        });
+    </script>
+</body>
+</html>

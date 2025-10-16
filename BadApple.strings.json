@@ -1,0 +1,22 @@
+{
+  "debug_gamemode_start": "Gamemode started",
+  "debug_interacted_with_item": "Interacted with id {}",
+  "debug_interacted_with_start": "Interacted with anim start",
+  "debug_anim_spawn_location": "Anim spawn X:{} Y:{} Z:{}",
+  "debug_anim_spawn_error": "Could not find animation root object",
+  "debug_spawning_pixel_props": "Spawning pixel props",
+  "debug_total_pixel_props": "Total spawned pixels: {}",
+  "debug_starting_animation": "Starting animation",
+  "debug_line_progress": "Ran line {}",
+  "debug_animation_pre_parse": "Parsing: {}",
+  "debug_anim_finished_parsing_frame": "Finished parsing RLE frame. Length: {}",
+  "debug_animation_parsed": "Anim data parsed. Final data count: {}",
+  "debug_animation_stats": "Anim data width: {} height {}",
+  "debug_animation_parse_stringkey_error": "Could not parse animation frames",
+  "debug_catch_error": "Try/catch error was {}",
+  "debug_anim_starting_frame": "Starting animation frame {}",
+  "debug_animation_verify_pixel_loop": "Inside pixel loop", 
+  "debug_animation_RLE_Data": "RLE pair values Value: {} Count {}", 
+  "debug_anim_loop_err": "Caught error in anim loop",
+  "debug_pixel_loop_err": "Caught error in pixel loop"
+ }
